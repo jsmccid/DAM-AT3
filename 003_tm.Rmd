@@ -1,0 +1,273 @@
+# Text Mining using the "tm" package
+
+## Loading Documents
+```{r}
+icorpus <- VCorpus(DirSource("./docs/"))
+```
+
+
+```{r}
+#Preprocessing
+#function version of process from Block session 5
+
+preprocess_corpus <- function(corpus) {
+  #Remove punctuation - replace punctuation marks with " "
+  out <- tm_map(corpus, removePunctuation)
+  #Transform to lower case
+  out <- tm_map(out,content_transformer(tolower))
+  #Strip digits
+  out <- tm_map(out, removeNumbers)
+  #Remove stopwords from standard stopword list 
+  out <- tm_map(out, removeWords, stopwords("english"))
+  #Strip whitespace (cosmetic?)
+  out <- tm_map(out, stripWhitespace)
+  #Stem document
+  out <- tm_map(out, stemDocument, language = "english")
+  return(out)
+}
+
+#converting to list at stemDocument???
+
+p_corpus <- preprocess_corpus(icorpus)
+
+p_dtm <- DocumentTermMatrix(p_corpus)
+
+inspect(p_dtm[1:5,1000:1006]) #issues difficult and difficulti should stem together?
+
+# potetially worth adressing later
+
+```
+
+```{r}
+p_freq <- colSums(as.matrix(p_dtm))
+p_ord <- order(p_freq,decreasing=TRUE)
+p_freq[head(p_ord)]
+p_freq[tail(p_ord)]
+
+p_freq_frame <- data.frame(term=names(p_freq),occurrences=p_freq)
+summary(p_freq_frame)
+
+# median of 2, mean of 11, max of 585
+
+# does it start to become more relevent if we cut the really low end
+
+pff_sub <- p_freq_frame %>% 
+  filter(occurrences >= 3)
+summary(pff_sub)
+
+ggplot(p_freq_frame, aes(x = occurrences)) + geom_density()
+ggplot(pff_sub, aes(x = occurrences)) + geom_density()
+ggplot(pff_sub, aes(x = occurrences)) + geom_histogram(binwidth = 5)
+
+# only a few occurances above 200 and a massive spike at the bottom end
+
+# could add many of those low occuring words to removewords? could be risky -----
+
+pff_sub2 <- p_freq_frame %>% 
+  filter(occurrences >= 15, occurrences <= 200)
+ggplot(pff_sub2, aes(x = occurrences)) + geom_histogram(binwidth = 5)
+
+# better distribution at >15 and <200, could cut at 125
+
+pff_sub3 <- p_freq_frame %>% 
+  filter(occurrences >= 15, occurrences <= 125)
+ggplot(pff_sub3, aes(x = occurrences)) + geom_histogram(binwidth = 2)
+
+#list most frequent terms. Lower bound specified as second argument <50 occurances, where words start occur many times, but less variety
+findFreqTerms(p_dtm,lowfreq=50) 
+
+findAssocs(p_dtm,"algorithm",0.7)
+# some strange words eg. contenttransformergsubpattern, hclustdmethodwardd, looks like code
+
+# check distribution of length of words
+p_freq_frame$length <- nchar(as.character(p_freq_frame$term))
+
+ggplot(p_freq_frame, aes(x = length)) + geom_density()
+
+# longest word is around 28 characters, realistic word is much less
+
+
+p <- ggplot(subset(p_freq_frame, occurrences>200), aes(reorder(term,occurrences), occurrences))
+p <- p + geom_bar(stat="identity")
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))
+p
+
+# project managment? risk? ml? probaility distributions?
+set.seed(55)
+
+wordcloud(names(p_freq),p_freq, max.words=45, colors=brewer.pal(6,"Dark2"))
+
+# need to get an idea of frequencies?
+
+pff_unstem <- as.data.frame(unname(as.matrix(p_freq_frame)), stringsAsFactors = FALSE)
+names(pff_unstem) <- c("term", "occurrences")
+pff_unstem$fullterm <- stemCompletion(pff_unstem$term, icorpus, type = "prevalent")
+pff_unstem[pff_unstem$fullterm == "", "fullterm"] <- pff_unstem[pff_unstem$fullterm == "", "term"]
+pff_unstem$occurrences <- as.numeric(pff_unstem$occurrences)
+
+wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=brewer.pal(6,"Set2"))
+
+wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#f8766d", "#00bf7d", "#00b0f6", "#e76bf3"))
+
+wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+
+# purp #ff00f9
+# green #41cd61
+# orange #f08025
+# white #ffffff
+
+findAssocs(p_dtm,"algorithm",0.7)
+```
+
+## ngrams
+n grams increases complexity, as there is more variety of combinations than individual words, what is a good number for n??
+
+```{r}
+BigramTokenizer <-  function(x) unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)
+dtmbi <- DocumentTermMatrix(p_corpus, control = list(tokenize = BigramTokenizer))
+freqbi <- colSums(as.matrix(dtmbi))
+length(freqbi)
+ordbi <- order(freqbi,decreasing=TRUE)
+freqbi[head(ordbi)]
+
+# monte carlo method??
+
+```
+
+## Custom stopwords
+* need to update and improve
+* reason why thse are useful?
+  ** mostly adverbs
+```{r}
+# stopwords from block session 5 (by kailash, likely relevent to his documents)
+
+kstopwords <- c("can", "say","one","way","use",
+                 "also","howev","tell","will",
+                 "much","need","take","tend","even",
+                 "like","particular","rather","said",
+                 "get","well","make","ask","come","end",
+                 "first","two","help","often","may",
+                 "might","see","someth","thing","point",
+                 "post","look","right","now","think","'ve ",
+                 "'re ","anoth","put","set","new","good",
+                 "want","sure","kind","larg","yes,","day","etc",
+                 "quit","sinc","attempt","lack","seen","awar",
+                 "littl","ever","moreov","though","found","abl",
+                 "enough","far","earli","away","achiev","draw",
+                 "last","never","brief","bit","entir","brief",
+                 "great","lot","man","say","well")
+
+identstopwords <- c("can", "use", "one", "figur", "will", "probabl", "see", "way", "make", "may", 
+                    "note", "well", "like", "howev", "get", "take", "need", "also", "often", "now", "said",
+                    "ill", "thing", "much", "let", "although", "might", "say", "step", "anoth", "given", 
+                    "rather", "inde", "seem", "that", "must", "isn’t", "put", "via", "latter", "seen",
+                    "there", "therefor", "though", "thus", "what")
+
+
+refined_stopwords <- dplyr::union(identstopwords, kstopwords)
+
+c_corpus <- docs <- tm_map(p_corpus, removeWords, refined_stopwords)
+
+# refined document term matrix
+# wordlengths as per earlier distributions
+# bounds, need to determine distribution across documents?
+
+dtmr <- DocumentTermMatrix(c_corpus, control=list(wordLengths=c(4, 25),
+                                             bounds = list(global = c(4,42))))
+freqr <- colSums(as.matrix(dtmr))
+length(freqr)
+ordr <- order(freqr,decreasing=TRUE)
+freqr[head(ordr)]
+
+wfr <- data.frame(term=names(freqr),occurrences=freqr)
+
+wfr_unstem <- as.data.frame(unname(as.matrix(wfr)), stringsAsFactors = FALSE)
+names(wfr_unstem) <- c("term", "occurrences")
+wfr_unstem$fullterm <- stemCompletion(wfr_unstem$term, icorpus, type = "prevalent")
+wfr_unstem[wfr_unstem$fullterm == "", "fullterm"] <- wfr_unstem[wfr_unstem$fullterm == "", "term"]
+wfr_unstem$occurrences <- as.numeric(wfr_unstem$occurrences)
+
+wordcloud(wfr_unstem$fullterm,wfr_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+
+wordcloud(wfr_unstem$fullterm,wfr_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+# if it appears everywhere how relevent is it?
+
+findAssocs(dtmr,"project",0.2)
+```
+
+
+```{r}
+further_stopwords <- c("start", "result", "view", "done", "shown", "show", "exampl", "depend", "clear", "follow",
+                       "best", "relate", "within", "differ", "discuss", "two", "set", "look", "good", "start", 
+                       "even", "describe", "end", "new", "show", "shown", "suggest", "think", "know", "next",
+                       "previous", "second", "three", "just", "include", "give", "mine", "real", "come", "known",
+                       "earlier", "later", "tend", "despit", "sure", "understand", "don’t", "case", "long", "goal",
+                       "refer", "offer", "relat", "relate", "possibl")
+
+final_stopwords <- dplyr::union(refined_stopwords, further_stopwords)
+
+f_corpus <- tm_map(p_corpus, removeWords, final_stopwords)
+
+dtmf <- DocumentTermMatrix(f_corpus, control=list(wordLengths=c(4, 25),
+                                             bounds = list(global = c(4,42))))
+freqf <- colSums(as.matrix(dtmf))
+length(freqf)
+ordr <- order(freqf,decreasing=TRUE)
+freqf[head(ordr)]
+
+wff <- data.frame(term=names(freqf),occurrences=freqf)
+
+wff_unstem <- as.data.frame(unname(as.matrix(wff)), stringsAsFactors = FALSE)
+names(wff_unstem) <- c("term", "occurrences")
+wff_unstem$fullterm <- stemCompletion(wff_unstem$term, icorpus, type = "prevalent")
+wff_unstem[wff_unstem$fullterm == "", "fullterm"] <- wff_unstem[wff_unstem$fullterm == "", "term"]
+wff_unstem$occurrences <- as.numeric(wff_unstem$occurrences)
+
+wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+
+wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+
+
+# hmmmm
+```
+
+Create function that preprocesses? by options?
+```{r}
+
+```
+
+## tfidf? weighting?
+
+```{r}
+
+#normalised occurance? 
+dtm_tfidf <- DocumentTermMatrix(f_corpus,control = list(weighting = weightTfIdf, wordLengths = c(4,25)))
+wt_tot_tfidf <- colSums(as.matrix(dtm_tfidf))
+ord_tfidf <- order(wt_tot_tfidf,decreasing=TRUE)
+wt_tot_tfidf[head(ord_tfidf)] #hmm
+
+wf_tot_tfidf <- data.frame(term=names(wt_tot_tfidf),weights=wt_tot_tfidf)
+p <- ggplot(subset(wf_tot_tfidf, wt_tot_tfidf>.2), aes(reorder(term,weights), weights))
+p <- p + geom_bar(stat="identity")
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))
+p
+
+tfidf_unstem <- as.data.frame(unname(as.matrix(wf_tot_tfidf)), stringsAsFactors = FALSE)
+names(tfidf_unstem) <- c("term", "occurrences")
+tfidf_unstem$fullterm <- stemCompletion(tfidf_unstem$term, icorpus, type = "prevalent")
+tfidf_unstem[tfidf_unstem$fullterm == "", "fullterm"] <- tfidf_unstem[tfidf_unstem$fullterm == "", "term"]
+tfidf_unstem$occurrences <- as.numeric(tfidf_unstem$occurrences)
+
+wordcloud(tfidf_unstem$fullterm,tfidf_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+
+wordcloud(tfidf_unstem$fullterm,tfidf_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+Save output
+```{r, eval = FALSE}
+
+save(p_dtm, dtmr, dtmf, dtm_tfidf, file = "./data/dtms.Rdata")
+save(p_corpus, c_corpus, f_corpus, file = "./data/corpora.Rdata")
+
+```
+

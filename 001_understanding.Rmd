@@ -1,65 +1,6 @@
 # Understanding
 
-```{r}
+* 42 docs
+* blog posts (002)
 
-
-```
-
-
-## Documents
-
-What are they?
-Can I use R to find doc's from a part?
-
-```{r}
-# https://stackoverflow.com/questions/32889136/how-to-get-google-search-results
-
-get_first_google_link <- function(searchterm, root = TRUE) {
-  url = URLencode(paste0("https://www.google.com/search?q=",searchterm))
-  page <- xml2::read_html(url)
-  # extract all links
-  nodes <- rvest::html_nodes(page, "a")
-  links <- rvest::html_attr(nodes,"href")
-  # extract first link of the search results
-  link <- links[startsWith(links, "/url?q=")][1]
-  # clean it
-  link <- sub("^/url\\?q\\=(.*?)\\&sa.*$","\\1", link)
-  # get root if relevant
-  if(root) link <- sub("^(https?://.*?/).*$", "\\1", link)
-  link
-}
-
-# companies <- data.frame(company = c("apple acres llc","abbvie inc","apple inc"))
-# companies <- transform(companies, url = sapply(company,get_first_google_link))
-# companies
-```
-
-```{r}
-docs <- as.list(list.files(path = "./docs"))
-paths <- lapply(docs, function(x) paste("./docs/", x, sep = ""))
-content <- lapply(paths, read_file)
-searchstrings <- lapply(content, function(x) word(x, start = 1, end = 20))
-searchstrings <- lapply(searchstrings, function(x) paste('"', x, '"', sep = ""))
-urls <- lapply(searchstrings, get_first_google_link, root = FALSE)
-
-docs[[1]][2] <- "a"
-
-alldocs <-  tibble(docs = list.files(path = "./docs"))
-alldocs$
-
-
-alldocs$url <- sapply(alldocs$docs, get_first_google_link, root = FALSE)
-```
-
-```{r}
-# Create a list containing a vector, a matrix and a list.
-list_data <- list(c("Jan","Feb","Mar"), matrix(c(3,9,5,1,-2,8), nrow = 2),
-   list("green",12.3))
-
-# Give names to the elements in the list.
-names(list_data) <- c("1st Quarter", "A_Matrix", "A Inner list")
-
-# Show the list.
-print(list_data)
-```
 

@@ -1,0 +1,177 @@
+# Extra Discovery Search Exploration
+
+```{r}
+# load outputs
+
+docs_searched <- readRDS(file = "./data/docs_searched.RDS")
+docs_strings <- readRDS(file = "./data/docs_strings.RDS")
+```
+
+# Initial first sentence search
+```{r}
+
+dsrch_data <- data.frame(matrix(data = NA, nrow = 1, ncol = 4), stringsAsFactors = FALSE)[-1,]
+names(dsrch_data) <- c("doc", "path", "search", "url")
+
+for (i in docs_searched) {
+  doc <- i$doc
+  path <- i$path
+  search <- i$search
+  url <- i$url
+  row <- cbind(doc, path, search, url)
+  dsrch_data <- rbind(dsrch_data, row, stringsAsFactors = FALSE)
+}
+
+dsrch_data$url[1:5]
+```
+
+The document set is a collection of whole or parts of blog entries from eight2late with some inconsistency. Manual checking and cleaning of these entries to complete the url set. This process would quite challening, impossible or merely a waste of time on corpus that is much larger, and require automation.
+
+```{r}
+# very different results from eight to late
+
+# Doc 20
+# https://www.pinterest.com.au/pin/423268064964550659/
+# searching term and selecting the more appropriate result
+# https://eight2late.wordpress.com/2015/07/22/a-gentle-introduction-to-cluster-analysis-using-r/
+# replace entry in df
+
+dsrch_data$url[20] <- "https://eight2late.wordpress.com/2015/07/22/a-gentle-introduction-to-cluster-analysis-using-r/"
+
+# Doc 42
+# https://www.datacamp.com/community/news/an-intuitive-introduction-to-support-vector-machines-using-r-part-1-wbzf8z3i4p
+# https://eight2late.wordpress.com/2018/06/06/an-intuitive-introduction-to-support-vector-machines-using-r-part-1/
+
+dsrch_data$url[42] <- "https://eight2late.wordpress.com/2018/06/06/an-intuitive-introduction-to-support-vector-machines-using-r-part-1/"
+
+# urls that reference a collection of blog entries by month
+
+# Doc 1
+dsrch_data$url[1] <- "https://eight2late.wordpress.com/2018/02/05/risk-management-and-organizational-anxiety/"
+
+# Doc 4
+dsrch_data$url[4] <- "https://eight2late.wordpress.com/2011/01/20/elephants-in-the-room-seven-reasons-why-project-risks-are-ignored/"
+
+# Doc 7
+dsrch_data$url[7] <- "https://eight2late.wordpress.com/2010/06/02/operational-and-strategic-risks-on-projects/"
+
+# Doc 8
+dsrch_data$url[8] <- "https://eight2late.wordpress.com/2010/02/11/the-failure-of-risk-management-a-book-review/"
+
+# Doc 15
+dsrch_data$url[15] <- "https://eight2late.wordpress.com/2009/04/15/capturing-project-knowledge-using-issue-maps/"
+
+# Doc 17
+dsrch_data$url[17] <- "https://eight2late.wordpress.com/2009/06/25/visualising-arguments-using-issue-maps-an-example-and-some-general-comments/"
+
+# Doc 26
+dsrch_data$url[26] <- "https://eight2late.wordpress.com/2013/05/07/a-stupidity-based-theory-of-organisations-a-paper-review/"
+
+# Doc 28
+dsrch_data$url[28] <- "https://eight2late.wordpress.com/2008/02/26/the-effect-of-organizational-culture-on-project-success/"
+
+# Doc 32
+dsrch_data$url[32] <- "https://eight2late.wordpress.com/2010/05/20/on-the-relationship-between-projects-and-organisations/"
+
+# urls that reference a collection by tag or category
+
+# Doc 11
+dsrch_data$url[11] <- "https://eight2late.wordpress.com/2014/11/24/from-information-to-knowledge-the-what-and-whence-of-issue-based-information-systems/"
+
+# Doc 18
+dsrch_data$url[18] <- "https://eight2late.wordpress.com/2017/02/23/a-prelude-to-machine-learning/"
+
+# Doc 22
+dsrch_data$url[22] <- "https://eight2late.wordpress.com/2015/12/02/a-gentle-introduction-to-network-graphs-using-r-and-gephi/"
+
+# Doc 23
+dsrch_data$url[23] <- "https://eight2late.wordpress.com/2015/04/07/from-the-coalface-an-essay-on-the-early-history-of-sociotechnical-systems/"
+
+
+# url not referencing specific articles
+
+# Doc 5
+dsrch_data$url[5] <- "https://eight2late.wordpress.com/2011/01/06/there's-trouble-ahead-early-warning-signs-of-project-failure/"
+
+# Doc 16
+dsrch_data$url[16] <- "https://eight2late.wordpress.com/2009/04/07/issues-ideas-and-arguments-a-communication-centric-approach-to-tackling-project-complexity/"
+
+# Doc 37
+dsrch_data$url[37] <- "https://eight2late.wordpress.com/2011/02/25/the-drunkard's-dartboard-an-intuitive-explanation-of-monte-carlo-methods/"
+
+```
+
+Now each document is linked to a specific artile, these article links conveniently have data and title of the post in a consistent format.
+
+```{r}
+dsrch_data$date <- NA
+dsrch_data$title <- NA
+
+for (i in 1:nrow(dsrch_data)) {
+  ur <- dsrch_data[i,4]
+  str <- strsplit(ur, "[/]")
+  dte <- paste(str[[1]][4],str[[1]][5],str[[1]][6], sep = "-")
+  ttl <- str[[1]][7] 
+  dsrch_data[i,5] <- dte
+  dsrch_data[i,6] <- ttl
+}
+
+titles <- unique(dsrch_data$title)
+# all unique articles
+
+dsrch_data$date <- as.Date(dsrch_data$date)
+range(dsrch_data$date)
+#2008-02-26 to 2018-06-06
+
+dsrch_data$timesincefirst <- floor(difftime(dsrch_data$date, "2008-02-26", units = "days"))
+
+ggplot(dsrch_data, aes(x = date, y = 1)) + geom_point()
+
+head(dsrch_data)
+
+```
+
+## rename docs
+```{r, eval=FALSE}
+dsrch_data$newpath <- paste("./titleddocs/", dsrch_data$date, "_", dsrch_data$title, sep = "")
+file.copy(dsrch_data$path, dsrch_data$newpath, copy.mode = TRUE, copy.date = TRUE)
+```
+
+
+
+
+## check matching?
+
+```{r}
+init_clus <- readRDS(file = "./data/initial_clusters.RDS")
+lsa_clus <- readRDS(file = "./data/lsa_clusters.RDS")
+lda_clus <- readRDS(file = "./data/lda_group.RDS")
+
+cluster_output <- merge(init_clus, lsa_clus, by = "rowname")
+cluster_output <- merge(cluster_output, lda_clus, by = "rowname")
+```
+
+lda and lsa are relaitlvly consistent
+
+## Themes over time
+
+group by time
+```{r}
+cluster_output$date <- dsrch_data$date
+
+ggplot(cluster_output, aes(x = date, y = lda4topic)) + geom_point()
+```
+topic groupings do not appear to be conistent with distribution over time
+
+```{r}
+cluo <- cluster_output %>% 
+  select(-rowname)
+cluo$date <- as.numeric(cluo$date)
+pairs(cluo)
+
+shared <- proxy::dist(cluo, method = NMI, pairwise = TRUE, by_rows = FALSE)
+shared <- as.matrix(shared)
+corrplot(shared, method = "number")
+
+```
+

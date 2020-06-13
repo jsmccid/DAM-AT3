@@ -1,0 +1,120 @@
+# Latent Semantic Analysis
+```{r}
+f_tdm <- TermDocumentMatrix(f_corpus, control = list(wordLengths = c(4,25)))
+inspect(f_tdm[1000:1006,1:10])
+f_tdm.matrix <- as.matrix(f_tdm)
+f_tdm.matrix.lsa <- lw_tf(f_tdm.matrix) * gw_idf(f_tdm.matrix)
+
+#compute the Latent semantic space
+f_lsaSpace <- lsa(f_tdm.matrix.lsa, dimcalc_share())
+names(f_lsaSpace)
+f_LSAMat <- as.textmatrix(f_lsaSpace)
+
+f_LSAMat["risk",1:10]
+f_tdm.matrix.lsa["risk",1:10]
+
+#Similarity matrix
+f_cs.lsa <- as.matrix(cosineSim(t(f_LSAMat)))
+f_cs.lsa[f_cs.lsa < 0.7] <- 0 # change?
+f_cs.lsa <- round(f_cs.lsa,3)
+
+dim(f_lsaSpace$tk)
+f_LSAtk <- t(f_lsaSpace$sk*t(f_lsaSpace$tk))
+neighbors("risk",n=10,tvectors=f_LSAtk)
+
+# gaze into crytal ball?? alleman?
+
+neighbors("organis",n=10,tvectors=f_LSAtk)
+```
+## wordmap
+
+## clustering
+```{r}
+f_lsa_csd <- cosineDist(t(f_LSAMat))
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(f_lsa_csd, centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, stats::dist(f_lsa_csd))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+
+# 4 or 5 cluster optimum in LSA approx 0.47 medium to weak structure
+
+```
+
+
+```{r}
+f_lsa_csd <- cosineDist(t(f_LSAMat))
+
+f_lsa_clus5 <- kmeans(f_lsa_csd, 5, nstart=100)
+
+clusplot(as.matrix(f_lsa_csd), f_lsa_clus5$cluster, color=T, shade=T, labels=2, lines=0)
+
+f_lsa_clus4 <- kmeans(f_lsa_csd, 4, nstart=100)
+
+f_lsa_clus5_clusters <- as.data.frame(f_lsa_clus5$cluster) %>% 
+  rownames_to_column() %>% 
+  remove_rownames()
+
+f_lsa_clus4_clusters <- as.data.frame(f_lsa_clus4$cluster) %>% 
+  rownames_to_column() %>% 
+  remove_rownames()
+
+lsa_clusters <- merge(f_lsa_clus5_clusters, f_lsa_clus4_clusters, by = "rowname")
+
+```
+
+
+## network graphing
+```{r}
+f_cs.lsa_ng <- cosineSim(t(f_LSAMat))
+f_cs.lsa_ng[f_cs.lsa_ng < median(f_cs.lsa_ng)] <- 0
+f_cs.lsa_ng <- round(f_cs.lsa_ng,3)
+
+filekey_lsa <- cbind(1:42,rownames(t(f_LSAMat)))
+
+g_lsa <- graph.adjacency(as.matrix(f_cs.lsa_ng), weighted=T, mode = "undirected")
+plot(g_lsa, layout=layout.kamada.kawai)
+
+#Community detection - Fast/Greedy
+comm_fg_lsa <- fastgreedy.community(g_lsa)
+comm_fg_lsa$membership
+V(g_lsa)$color <- comm_fg_lsa$membership
+plot(g_lsa, layout=layout.kamada.kawai)
+community_mapping_lsa <- cbind(as.data.frame(filekey_lsa, row.names = F),comm_fg_lsa$membership)
+
+#Community detection - Louvain
+comm_lv_lsa <- cluster_louvain(g_lsa)
+comm_lv_lsa$membership
+V(g_lsa)$color <- comm_lv_lsa$membership
+plot(g_lsa, layout=layout.kamada.kawai)
+community_mapping_lsa <- cbind(community_mapping_lsa,comm_lv_lsa$membership)
+
+# three groupings in LSA space? Slight differences between the two
+
+colnames(community_mapping_lsa)[2] <- "rowname"
+
+lsa_clusters <- merge(lsa_clusters, community_mapping_lsa, by = "rowname")
+lsa_clusters <- lsa_clusters[-4]
+```
+
+```{r}
+#saveRDS(lsa_clusters, file = "./data/lsa_clusters.RDS")
+```
+
+```{r}
+
+```
+

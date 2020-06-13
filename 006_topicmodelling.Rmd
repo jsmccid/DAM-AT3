@@ -1,0 +1,258 @@
+# Topic Modelling
+
+```{r}
+load("./data/dtms.Rdata")
+```
+
+# Initial DTM
+
+14 topics as per previous clustering on intial dtm
+```{r}
+p_ldaOut <- LDA(p_dtm,14, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(p_ldaOut)
+ldaOut.topics <-as.matrix(topics(p_ldaOut))
+terms(p_ldaOut,8)
+ldaOut.terms <- as.matrix(terms(p_ldaOut,8))
+#Find probabilities associated with each topic assignment
+topicProbabilities <- as.data.frame(p_ldaOut@gamma) 
+
+#no articles assigned to topic 10
+```
+
+
+## Refined DTM
+previous analysis identified values 2-5 groups as likely, 2 being identied once in the weakest group, 3 twice, 4 twice and 5 3 times, both 4 and 5 in LSA which showed the strongest likehood of finding structure
+
+### 4 topics
+```{r}
+f_ldaOut4 <- LDA(dtmf,4, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut4)
+f_ldaOut.topics4 <-as.matrix(topics(f_ldaOut4))
+terms(f_ldaOut4,10)
+f_ldaOut.terms4 <- as.matrix(terms(f_ldaOut4,8))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities4 <- as.data.frame(f_ldaOut4@gamma)
+
+```
+### 5 topics
+```{r}
+# 4 clusters as identified earlier
+f_ldaOut5 <- LDA(dtmf,5, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut5)
+f_ldaOut.topics5 <-as.matrix(topics(f_ldaOut5))
+terms(f_ldaOut5,10)
+f_ldaOut.terms5 <- as.matrix(terms(f_ldaOut5,8))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities5 <- as.data.frame(f_ldaOut5@gamma)
+```
+
+clearer deliniation between topics with 5
+
+```{r}
+lda4_topics <- as.data.frame(f_ldaOut.topics4) %>% 
+  rownames_to_column() %>% 
+  remove_rownames()
+names(lda4_topics)[2] <- "lda4topic"
+
+lda5_topics <- as.data.frame(f_ldaOut.topics5) %>% 
+  rownames_to_column() %>% 
+  remove_rownames()
+names(lda5_topics)[2] <- "lda5topic"
+
+lda_group <- merge(lda4_topics, lda5_topics, by = "rowname")
+```
+
+## CTM
+```{r}
+f_ctmOut <- CTM(dtmf, 4, method="VEM", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE))
+
+terms(f_ctmOut,8)
+```
+
+
+```{r}
+#saveRDS(lda_group, "./data/lda_group.RDS")
+```
+
+```{r}
+# https://cran.r-project.org/web/packages/ldatuning/vignettes/topics.html
+
+result_lda <- FindTopicsNumber(
+  dtmf,
+  topics = seq(from = 2, to = 50, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 4L,
+  verbose = TRUE
+)
+
+FindTopicsNumber_plot(result_lda)
+```
+
+
+```{r}
+# https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
+
+docs_ser <- readRDS("./data/docs_searched.RDS")
+d_name <- lapply(docs_ser, function(x) x <- x$doc)
+d_name <- unlist(d_name)
+d_vec <- lapply(docs_ser, function(x) x <- x$content)
+d_vec <- unlist(d_vec)
+
+tmr_dtmf <- CreateDtm(doc_vec = d_vec, # character vector of documents
+                 doc_names = d_name, # document names
+                 ngram_window = c(1, 3), # minimum and maximum n-gram length
+                 stopword_vec = c(stopwords::stopwords("en"), # stopwords from tm
+                                  stopwords::stopwords(source = "smart"),
+                                  final_stopwords), # this is the default value
+                 lower = TRUE, # lowercase - this is the default value
+                 remove_punctuation = TRUE, # punctuation - this is the default
+                 remove_numbers = TRUE, # numbers - this is the default
+                 verbose = TRUE, # Turn off status bar for this demo
+                 cpus = 4) # default is all available cpus on the system
+
+# tmr_dtmf <- as.matrix(dtmf)
+# tmr_dtmf <- as(tmr_dtmf, "sparseMatrix")
+
+
+tmr_lda <- FitLdaModel(dtm = tmr_dtmf, 
+                     k = 4,
+                     iterations = 500, # I usually recommend at least 500 iterations or more
+                     burnin = 180,
+                     alpha = 0.1,
+                     beta = 0.05,
+                     optimize_alpha = TRUE,
+                     calc_likelihood = TRUE,
+                     calc_coherence = TRUE,
+                     calc_r2 = TRUE,
+                     cpus = 4) 
+
+plot(tmr_lda$log_likelihood, type = "l")
+
+hist(tmr_lda$coherence, 
+     col= "blue", 
+     main = "Histogram of probabilistic coherence")
+
+tmr_lda$top_terms <- GetTopTerms(phi = tmr_lda$phi, M = 5)
+head(t(tmr_lda$top_terms))
+
+tmr_lda$prevalence <- colSums(tmr_lda$theta) / sum(tmr_lda$theta) * 100
+
+plot(tmr_lda$prevalence, tmr_lda$alpha, xlab = "prevalence", ylab = "alpha")
+
+tmr_lda$labels <- LabelTopics(assignments = tmr_lda$theta > 0.05, 
+                            dtm = tmr_dtmf,
+                            M = 1)
+
+tmr_lda$summary <- data.frame(topic = rownames(tmr_lda$phi),
+                            label = tmr_lda$labels,
+                            coherence = round(tmr_lda$coherence, 3),
+                            prevalence = round(tmr_lda$prevalence,3),
+                            top_terms = apply(tmr_lda$top_terms, 2, function(x){
+                              paste(x, collapse = ", ")
+                            }),
+                            stringsAsFactors = FALSE)
+
+tmr_lda$summary[ order(tmr_lda$summary$prevalence, decreasing = TRUE) , ][ 1:10 , ]
+```
+
+
+```{r}
+# https://rdrr.io/github/ChengMengli/tf-idf/f/vignettes/Introduction%20to%20textmineR.Rmd
+
+# choose a range of k 
+# - here, the range runs into the corpus size. Not recommended for large corpora!
+k_list <- seq(2, 25, by = 1)
+
+# set up a temporary directory to store fit models so you get partial results
+# if the process fails or times out. This is a trivial example, but with a decent
+# sized corpus, the procedure can take hours or days, depending on the size of 
+# the data and complexity of the model.
+# I'm using the digest function to create a hash so that it's obvious this is a 
+# temporary directory
+model_dir <- paste0("models_", digest::digest(colnames(nih_sample_dtm), algo = "sha1"))
+
+if (!dir.exists(model_dir)) dir.create(model_dir)
+
+# Fit a bunch of LDA models
+# even on this trivial corpus, it will a bit of time to fit all of these models
+model_list <- TmParallelApply(X = k_list, FUN = function(k){
+  filename = file.path(model_dir, paste0(k, "_topics.rda"))
+
+  if (!file.exists(filename)) {
+    m <- FitLdaModel(dtm = tmr_dtmf, k = k, iterations = 500)
+    m$k <- k
+    m$coherence <- CalcProbCoherence(phi = m$phi, dtm = tmr_dtmf, M = 5)
+    save(m, file = filename)
+  } else {
+    load(filename)
+  }
+
+  m
+}, export=c("tmr_dtmf", "model_dir")) # export only needed for Windows machines
+
+# Get average coherence for each model
+coherence_mat <- data.frame(k = sapply(model_list, function(x) nrow(x$phi)), 
+                            coherence = sapply(model_list, function(x) mean(x$coherence)), 
+                            stringsAsFactors = FALSE)
+
+
+# Plot the result
+# On larger (~1,000 or greater documents) corpora, you will usually get a clear peak
+plot(coherence_mat, type = "o")
+
+# 4, 5 is ok too and 12
+```
+
+
+```{r}
+tf_sample <- TermDocFreq(tmr_dtmf)
+tf_sample$idf[ is.infinite(tf_sample$idf) ] <- 0 # fix idf for missing words
+
+tf_idf <- t(tmr_dtmf / rowSums(tmr_dtmf)) * tf_sample$idf
+
+tf_idf <- t(tf_idf)
+
+# Fit a Latent Semantic Analysis model
+# note the number of topics is arbitrary here
+# see extensions for more info
+lsa_model <- FitLsaModel(dtm = tf_idf, 
+                     k = 4)
+lsa_model$top_terms <- GetTopTerms(phi = lsa_model$phi, M = 5)
+head(t(lsa_model$top_terms))
+
+# Get the prevalence of each topic
+# You can make this discrete by applying a threshold, say 0.05, for
+# topics in/out of docuemnts. 
+lsa_model$prevalence <- colSums(lsa_model$theta) / sum(lsa_model$theta) * 100
+
+# textmineR has a naive topic labeling tool based on probable bigrams
+lsa_model$labels <- LabelTopics(assignments = lsa_model$theta > 0.05, 
+                            dtm = tmr_dtmf,
+                            M = 1)
+
+# put them together, with coherence into a summary table
+lsa_model$summary <- data.frame(topic = rownames(lsa_model$phi),
+                            label = lsa_model$labels,
+                            coherence = round(lsa_model$coherence, 3),
+                            prevalence = round(lsa_model$prevalence,3),
+                            top_terms = apply(lsa_model$top_terms, 2, function(x){
+                              paste(x, collapse = ", ")
+                            }),
+                            stringsAsFactors = FALSE)
+
+lsa_model$summary[ order(lsa_model$summary$prevalence, decreasing = TRUE) , ][ 1:10 , ]
+
+#elephants???
+```

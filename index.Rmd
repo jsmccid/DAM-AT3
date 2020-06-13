@@ -8,9 +8,22 @@ output:
 ---
 
 ```{r}
-
 library(tidyverse)
 library(rvest)
 library(stringr)
-
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(cluster)
+library(topicmodels)
+library(igraph)
+library(lsa)
+library(LSAfun)
+library(janitor)
+library(textmineR)
+library(Matrix)
+library(ldatuning)
+library(corrplot)
+library(aricode)
+library(proxy)
 ```

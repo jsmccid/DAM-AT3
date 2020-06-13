@@ -1,0 +1,149 @@
+# Extra Discovery Search Generation
+
+## Documents
+
+What are they?
+Can I use R to find doc's from a part?
+
+```{r}
+# https://stackoverflow.com/questions/32889136/how-to-get-google-search-results
+
+#added sleeptime optional argument to delay queries and avoid 429 error
+
+get_first_google_link <- function(searchterm, sleeptime = NULL, root = FALSE) {
+  url = URLencode(paste0("https://www.google.com/search?q=",searchterm))
+  page <- xml2::read_html(url)
+  # extract all links
+  nodes <- rvest::html_nodes(page, "a")
+  links <- rvest::html_attr(nodes,"href")
+  # extract first link of the search results
+  link <- links[startsWith(links, "/url?q=")][1]
+  # clean it
+  link <- sub("^/url\\?q\\=(.*?)\\&sa.*$","\\1", link)
+  # get root if relevant
+  if(root) link <- sub("^(https?://.*?/).*$", "\\1", link)
+  # check if sleeptime was supplied, and is not negative, then sleep for that time
+  if(!is.null(sleeptime)) if(sleeptime > 0) Sys.sleep(sleeptime) 
+  return(link)
+}
+
+#  url <- get_first_google_link(searchstrings, root = FALSE)
+
+# companies <- data.frame(company = c("apple acres llc","abbvie inc","apple inc"))
+# companies <- transform(companies, url = sapply(company,get_first_google_link))
+# companies
+```
+
+```{r, eval = FALSE}
+# create previous to keep items together
+docs <- as.list(list.files(path = "./docs"))
+names(docs) <- docs
+docs <- lapply(docs, function(x) {
+  path <- paste("./docs/", x, sep = "")
+  content <- read_file(path)
+  searchstrings <- paste('"', strsplit(content, "[.]")[[1]][1], strsplit(content, "[.]")[[1]][2], '"', sep = "")
+  url <- get_first_google_link(searchstrings, sleeptime = 2, root = FALSE)
+  x <- list(doc = x,path = path,content = content, search = searchstrings, url = url)
+})
+
+docs_searched <- docs
+
+#saveRDS(docs_searched, file = "./data/docs_searched.RDS")
+
+head(docs_searched)
+```
+
+## docs are from an old blog, eight2late, what might be relevent about this?
+Dates / timeline of posts?
+Sources used?
+How can I use r to interpret them in a more human way to extract additional information?
+Should I scrape eight2late? See how topics have evolved over time??
+Are posts on certain topics grouped together in time? Likely relevent at that time?
+Find lost / old important domain knowledge?
+
+
+```{r,eval=FALSE}
+#sentence search job script
+
+library(tidyverse)
+library(rvest)
+library(stringr)
+
+get_first_google_link <- function(searchterm, sleeptime = NULL, root = FALSE) {
+  url = URLencode(paste0("https://www.google.com/search?q=",searchterm))
+  page <- xml2::read_html(url)
+  # extract all links
+  nodes <- rvest::html_nodes(page, "a")
+  links <- rvest::html_attr(nodes,"href")
+  # extract first link of the search results
+  link <- links[startsWith(links, "/url?q=")][1]
+  # clean it
+  link <- sub("^/url\\?q\\=(.*?)\\&sa.*$","\\1", link)
+  # get root if relevant
+  if(root) link <- sub("^(https?://.*?/).*$", "\\1", link)
+  # check if sleeptime was supplied, and is not negative, then sleep for that time
+  if(!is.null(sleeptime)) if(sleeptime > 0) Sys.sleep(sleeptime) 
+  return(link)
+}
+
+docs_strings <- as.list(list.files(path = "./docs"))
+names(docs_strings) <- docs_strings
+docs_strings <- lapply(docs_strings, function(x) {
+  path <- paste("./docs/", x, sep = "")
+  content <- read_file(path)
+  sentences <- strsplit(content, "[.]")
+  sentences <- unlist(sentences)
+  sentences <- as.list(sentences)
+  s_urls <- lapply(sentences, function(y) {
+    u <- get_first_google_link(y, sleeptime = 2, root = FALSE)
+    y <- list(sentence = y, url = u)
+    })
+  x <- list(doc = x,path = path,content = content, search = s_urls)
+})
+
+#saveRDS(docs_strings, file = "./data/docs_strings.RDS")
+
+```
+
+```{r,eval=FALSE}
+#sentences in quotes search job script
+
+library(tidyverse)
+library(rvest)
+library(stringr)
+
+get_first_google_link <- function(searchterm, sleeptime = NULL, root = FALSE) {
+  url = URLencode(paste0("https://www.google.com/search?q=",searchterm))
+  page <- xml2::read_html(url)
+  # extract all links
+  nodes <- rvest::html_nodes(page, "a")
+  links <- rvest::html_attr(nodes,"href")
+  # extract first link of the search results
+  link <- links[startsWith(links, "/url?q=")][1]
+  # clean it
+  link <- sub("^/url\\?q\\=(.*?)\\&sa.*$","\\1", link)
+  # get root if relevant
+  if(root) link <- sub("^(https?://.*?/).*$", "\\1", link)
+  # check if sleeptime was supplied, and is not negative, then sleep for that time
+  if(!is.null(sleeptime)) if(sleeptime > 0) Sys.sleep(sleeptime) 
+  return(link)
+}
+
+docs_quotes <- as.list(list.files(path = "./docs"))
+names(docs_quotes) <- docs_quotes
+docs_quotes <- lapply(docs_quotes, function(x) {
+  path <- paste("./docs/", x, sep = "")
+  content <- read_file(path)
+  sentences_q <- strsplit(content, "[.]")
+  sentences_q <- unlist(sentences_q)
+  sentences_q <- as.list(sentences_q)
+  q_urls <- lapply(sentences_q, function(y) {
+    y < - paste('"', y, '"', sep = "")
+    u <- get_first_google_link(y, sleeptime = 2, root = FALSE)
+    y <- list(sentence = y, url = u)
+    })
+  x <- list(doc = x,path = path,content = content, search = q_urls)
+})
+
+#saveRDS(docs_quotes, file = "./data/docs_quotes.RDS")
+```
