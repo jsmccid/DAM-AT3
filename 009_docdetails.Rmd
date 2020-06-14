@@ -1,2 +1,96 @@
 # Doc Details
 
+## Crawling post tags and categories
+
+```{r}
+library(rvest)
+dsrch <- readRDS(file = "./data/dsrch.RDS")
+d_urls <- dsrch$url
+
+outframe <- data.frame(url = NA, type = NA, value = NA)[-1,]
+catlistframe <- data.frame(url = NA, cats = NA)[-1,]
+
+for (website in d_urls) {
+  website_url <- gsub("'", "%E2%80%99", website)
+  page <- read_html(URLencode(website_url))
+  
+  categories <- page %>% 
+  html_nodes('a[rel="category tag"]') %>% 
+  html_text()
+  
+  tags <- page %>% 
+  html_nodes('a[rel="tag"]') %>% 
+  html_text()
+  
+  catframe <- data.frame(url = website, type = "category", value = categories, stringsAsFactors = FALSE)
+  catlist <- paste(categories, collapse = ", ")
+  catlist <- data.frame(url = website, cats = catlist, stringsAsFactors = FALSE)
+  
+  if (length(tags) != 0) {
+    tagframe <- data.frame(url = website, type = "tag", value = tags, stringsAsFactors = FALSE)
+    catframe <- rbind(catframe, tagframe)
+  }
+  
+  outframe <- rbind(outframe, catframe)
+  catlistframe <- rbind(catlistframe, catlist)
+}
+
+str(outframe)
+
+tags <- outframe %>% 
+  dplyr::filter(type == "tag")
+
+length(unique(tags$page))
+# only 9 results have tags, and only a few total
+
+categories <- outframe %>% 
+ dplyr::filter(type == "category") %>% 
+  select(-type) %>% 
+  left_join(dsrch, by = "url")
+
+categories_bin <- categories %>% 
+  select(doc, value)
+
+
+length(unique(categories$value))
+
+categories_bin <- dcast(melt(categories_bin, id.vars="doc", factorsAsStrings=TRUE), doc ~ value, drop=FALSE , fun.aggregate = length, fill = 0)
+
+
+```
+
+40 topics, however, artles fall into multiple topics, how to capture this?
+
+rethink the use of topic models, not just single assignments.
+
+```{r}
+# test simiarltiy with 40 topic model?
+
+f_ldaOut40 <- LDA(dtmf,40, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut40)
+f_ldaOut.topics40 <-as.matrix(topics(f_ldaOut40))
+terms(f_ldaOut40,20)
+f_ldaOut.terms40 <- as.matrix(terms(f_ldaOut40,8))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities40 <- as.data.frame(f_ldaOut40@gamma)
+
+# now what?
+
+
+```
+
+
+```{r, eval = FALSE}
+options(java.parameters = "-Xmx6G" )
+rJava::.jpackage(parameters="-Xmx4G")
+library(venneuler)
+venneuler::venneuler(outframe)
+
+
+
+
+```
+

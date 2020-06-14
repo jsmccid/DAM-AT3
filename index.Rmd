@@ -6,7 +6,9 @@ site: "bookdown::bookdown_site"
 output:
   bookdown::gitbook: default
 ---
+# Index
 
+## Load Libraries
 ```{r}
 library(tidyverse)
 library(rvest)
@@ -26,4 +28,5 @@ library(ldatuning)
 library(corrplot)
 library(aricode)
 library(proxy)
+library(reshape2)
 ```

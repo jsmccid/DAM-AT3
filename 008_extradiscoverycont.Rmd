@@ -129,12 +129,16 @@ ggplot(dsrch_data, aes(x = date, y = 1)) + geom_point()
 
 head(dsrch_data)
 
+#saveRDS(dsrch_data, file ="./data/dsrch.RDS")
+
 ```
 
 ## rename docs
 ```{r, eval=FALSE}
 dsrch_data$newpath <- paste("./titleddocs/", dsrch_data$date, "_", dsrch_data$title, sep = "")
 file.copy(dsrch_data$path, dsrch_data$newpath, copy.mode = TRUE, copy.date = TRUE)
+
+dsrch_data$filename <- paste(dsrch_data$date, "_", dsrch_data$title, sep = "")
 ```
 
 

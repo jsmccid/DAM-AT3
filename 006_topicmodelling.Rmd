@@ -34,7 +34,7 @@ f_ldaOut4 <- LDA(dtmf,4, method="Gibbs", control=
 
 topics(f_ldaOut4)
 f_ldaOut.topics4 <-as.matrix(topics(f_ldaOut4))
-terms(f_ldaOut4,10)
+terms(f_ldaOut4,20)
 f_ldaOut.terms4 <- as.matrix(terms(f_ldaOut4,8))
 #Find probabilities associated with each topic assignment
 f_topicProbabilities4 <- as.data.frame(f_ldaOut4@gamma)
@@ -49,13 +49,13 @@ f_ldaOut5 <- LDA(dtmf,5, method="Gibbs", control=
 
 topics(f_ldaOut5)
 f_ldaOut.topics5 <-as.matrix(topics(f_ldaOut5))
-terms(f_ldaOut5,10)
+terms(f_ldaOut5,20)
 f_ldaOut.terms5 <- as.matrix(terms(f_ldaOut5,8))
 #Find probabilities associated with each topic assignment
 f_topicProbabilities5 <- as.data.frame(f_ldaOut5@gamma)
 ```
 
-clearer deliniation between topics with 5
+clearer deliniation between topics with 5 by probability
 
 ```{r}
 lda4_topics <- as.data.frame(f_ldaOut.topics4) %>% 
@@ -89,7 +89,7 @@ terms(f_ctmOut,8)
 
 result_lda <- FindTopicsNumber(
   dtmf,
-  topics = seq(from = 2, to = 50, by = 1),
+  topics = seq(from = 2, to = 30, by = 1),
   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
   method = "Gibbs",
   control = list(seed = 77),
@@ -105,6 +105,7 @@ FindTopicsNumber_plot(result_lda)
 # https://cran.r-project.org/web/packages/textmineR/vignettes/c_topic_modeling.html
 
 docs_ser <- readRDS("./data/docs_searched.RDS")
+final_stopwords <- readRDS("./data/finalstops.RDS")
 d_name <- lapply(docs_ser, function(x) x <- x$doc)
 d_name <- unlist(d_name)
 d_vec <- lapply(docs_ser, function(x) x <- x$content)
@@ -121,10 +122,6 @@ tmr_dtmf <- CreateDtm(doc_vec = d_vec, # character vector of documents
                  remove_numbers = TRUE, # numbers - this is the default
                  verbose = TRUE, # Turn off status bar for this demo
                  cpus = 4) # default is all available cpus on the system
-
-# tmr_dtmf <- as.matrix(dtmf)
-# tmr_dtmf <- as(tmr_dtmf, "sparseMatrix")
-
 
 tmr_lda <- FitLdaModel(dtm = tmr_dtmf, 
                      k = 4,
@@ -173,7 +170,7 @@ tmr_lda$summary[ order(tmr_lda$summary$prevalence, decreasing = TRUE) , ][ 1:10 
 
 # choose a range of k 
 # - here, the range runs into the corpus size. Not recommended for large corpora!
-k_list <- seq(2, 25, by = 1)
+k_list <- seq(2, 61, by = 1)
 
 # set up a temporary directory to store fit models so you get partial results
 # if the process fails or times out. This is a trivial example, but with a decent
@@ -181,13 +178,13 @@ k_list <- seq(2, 25, by = 1)
 # the data and complexity of the model.
 # I'm using the digest function to create a hash so that it's obvious this is a 
 # temporary directory
-model_dir <- paste0("models_", digest::digest(colnames(nih_sample_dtm), algo = "sha1"))
+model_dir <- paste0("models_", digest::digest(colnames(tmr_dtmf), algo = "sha1"))
 
 if (!dir.exists(model_dir)) dir.create(model_dir)
 
 # Fit a bunch of LDA models
 # even on this trivial corpus, it will a bit of time to fit all of these models
-model_list <- TmParallelApply(X = k_list, FUN = function(k){
+model_list <- TmParallelApply(X = k_list, cpus = 4, FUN = function(k){
   filename = file.path(model_dir, paste0(k, "_topics.rda"))
 
   if (!file.exists(filename)) {
@@ -200,7 +197,7 @@ model_list <- TmParallelApply(X = k_list, FUN = function(k){
   }
 
   m
-}, export=c("tmr_dtmf", "model_dir")) # export only needed for Windows machines
+})#, export=c("tmr_dtmf", "model_dir")) # export only needed for Windows machines
 
 # Get average coherence for each model
 coherence_mat <- data.frame(k = sapply(model_list, function(x) nrow(x$phi)), 
@@ -212,9 +209,52 @@ coherence_mat <- data.frame(k = sapply(model_list, function(x) nrow(x$phi)),
 # On larger (~1,000 or greater documents) corpora, you will usually get a clear peak
 plot(coherence_mat, type = "o")
 
-# 4, 5 is ok too and 12
+# 4, 5 is ok too and 12, 20 and 38
 ```
 
+### 12 topics
+```{r}
+f_ldaOut12 <- LDA(dtmf,12, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut12)
+f_ldaOut.topics12 <-as.matrix(topics(f_ldaOut12))
+terms(f_ldaOut12,20)
+f_ldaOut.terms12 <- as.matrix(terms(f_ldaOut12,20))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities12 <- as.data.frame(f_ldaOut12@gamma)
+
+```
+
+### 20 topics
+```{r}
+f_ldaOut20 <- LDA(dtmf,20, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut20)
+f_ldaOut.topics20 <-as.matrix(topics(f_ldaOut20))
+terms(f_ldaOut20,20)
+f_ldaOut.terms20 <- as.matrix(terms(f_ldaOut20,20))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities20 <- as.data.frame(f_ldaOut20@gamma)
+```
+
+
+### 38 topics
+```{r}
+f_ldaOut38 <- LDA(dtmf,38, method="Gibbs", control=
+              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+
+
+topics(f_ldaOut38)
+f_ldaOut.topics38 <-as.matrix(topics(f_ldaOut38))
+terms(f_ldaOut38,20)
+f_ldaOut.terms38 <- as.matrix(terms(f_ldaOut38,20))
+#Find probabilities associated with each topic assignment
+f_topicProbabilities38 <- as.data.frame(f_ldaOut38@gamma)
+```
 
 ```{r}
 tf_sample <- TermDocFreq(tmr_dtmf)
@@ -256,3 +296,11 @@ lsa_model$summary[ order(lsa_model$summary$prevalence, decreasing = TRUE) , ][ 1
 
 #elephants???
 ```
+
+
+### NMI between topics?
+
+```{r}
+
+```
+

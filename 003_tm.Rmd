@@ -3,6 +3,7 @@
 ## Loading Documents
 ```{r}
 icorpus <- VCorpus(DirSource("./docs/"))
+
 ```
 
 
@@ -105,16 +106,17 @@ pff_unstem$fullterm <- stemCompletion(pff_unstem$term, icorpus, type = "prevalen
 pff_unstem[pff_unstem$fullterm == "", "fullterm"] <- pff_unstem[pff_unstem$fullterm == "", "term"]
 pff_unstem$occurrences <- as.numeric(pff_unstem$occurrences)
 
-wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=brewer.pal(6,"Set2"))
+set.seed(76)
 
-wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#f8766d", "#00bf7d", "#00b0f6", "#e76bf3"))
+# wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
 
-wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+wordcloud(pff_unstem$fullterm,pff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#000000", "#41cd61"))
 
 # purp #ff00f9
 # green #41cd61
 # orange #f08025
 # white #ffffff
+# black for bookdown #000000
 
 findAssocs(p_dtm,"algorithm",0.7)
 ```
@@ -187,7 +189,7 @@ wfr_unstem$fullterm <- stemCompletion(wfr_unstem$term, icorpus, type = "prevalen
 wfr_unstem[wfr_unstem$fullterm == "", "fullterm"] <- wfr_unstem[wfr_unstem$fullterm == "", "term"]
 wfr_unstem$occurrences <- as.numeric(wfr_unstem$occurrences)
 
-wordcloud(wfr_unstem$fullterm,wfr_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+# wordcloud(wfr_unstem$fullterm,wfr_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
 
 wordcloud(wfr_unstem$fullterm,wfr_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
 # if it appears everywhere how relevent is it?
@@ -223,18 +225,20 @@ wff_unstem$fullterm <- stemCompletion(wff_unstem$term, icorpus, type = "prevalen
 wff_unstem[wff_unstem$fullterm == "", "fullterm"] <- wff_unstem[wff_unstem$fullterm == "", "term"]
 wff_unstem$occurrences <- as.numeric(wff_unstem$occurrences)
 
-wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+set.seed(99)
+# wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
 
 wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
 
+# purp #ff00f9
+# green #41cd61
+# orange #f08025
+# white #
+# black for bookdown #000000
 
-# hmmmm
+
 ```
 
-Create function that preprocesses? by options?
-```{r}
-
-```
 
 ## tfidf? weighting?
 
@@ -254,13 +258,18 @@ p
 
 tfidf_unstem <- as.data.frame(unname(as.matrix(wf_tot_tfidf)), stringsAsFactors = FALSE)
 names(tfidf_unstem) <- c("term", "occurrences")
-tfidf_unstem$fullterm <- stemCompletion(tfidf_unstem$term, icorpus, type = "prevalent")
+ttfidf_unstem$fullterm <- stemCompletion(tfidf_unstem$term, icorpus, type = "prevalent")
 tfidf_unstem[tfidf_unstem$fullterm == "", "fullterm"] <- tfidf_unstem[tfidf_unstem$fullterm == "", "term"]
 tfidf_unstem$occurrences <- as.numeric(tfidf_unstem$occurrences)
 
-wordcloud(tfidf_unstem$fullterm,tfidf_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#ffffff"))
+set.seed(107)
+# wordcloud(tfidf_unstem$fullterm,tfidf_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
 
 wordcloud(tfidf_unstem$fullterm,tfidf_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+
+findAssocs(dtm_tfidf,"stupid",0.7)
+
+findAssocs(dtm_tfidf,"eleph",0.7)
 ```
 
 Save output
@@ -268,6 +277,7 @@ Save output
 
 save(p_dtm, dtmr, dtmf, dtm_tfidf, file = "./data/dtms.Rdata")
 save(p_corpus, c_corpus, f_corpus, file = "./data/corpora.Rdata")
+#saveRDS(final_stopwords, file = "./data/finalstops.RDS")
 
 ```
 

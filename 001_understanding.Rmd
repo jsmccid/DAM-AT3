@@ -1,6 +1,22 @@
-# Understanding
 
-* 42 docs
-* blog posts (002)
+# Building Initial Understanding
+
+42 docs
+```{r}
+dcs <- readRDS(file = "./data/docs_searched.RDS")
+
+lengths <- lapply(dcs, function(x) {
+  contentvec <- str_split(x$content, " ")[[1]]
+  x <- length(contentvec)
+})
+
+lengths_df <- data.frame(t(data.frame(lengths))) %>% 
+  rownames_to_column()
+
+names(lengths_df) <- c("doc", "wordcount")
+summary(lengths_df$wordcount)
+
+ggplot(lengths_df, aes(x = wordcount)) + geom_histogram(binwidth = 250) + ylab("Number of Documents") + xlab("Word Count, Width 250 Words") + ggtitle("Word Count Distribution") + theme_classic()
+```
 
 

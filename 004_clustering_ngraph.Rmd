@@ -120,7 +120,7 @@ avg_sil <- function(k) {
 }
 
 # Compute and plot wss for k = 2 to k = 15
-k.values <- 2:15
+k.values <- 2:40
 
 # extract avg silhouette for 2-15 clusters
 avg_sil_values <- map_dbl(k.values, avg_sil)
@@ -128,7 +128,8 @@ avg_sil_values <- map_dbl(k.values, avg_sil)
 plot(k.values, avg_sil_values,
        type = "b", pch = 19, frame = FALSE, 
        xlab = "Number of clusters K",
-       ylab = "Average Silhouettes")
+       ylab = "Average Silhouettes",
+       main = "TFIDF Clustering")
 
 # 2 or 5 for tfidf not substantial <0.2
 ```
@@ -137,7 +138,7 @@ plot(k.values, avg_sil_values,
 tfidf_kfit2 <- kmeans(tfidf_cosine_dist, 2, nstart=100)
 tfidf_kfit5 <- kmeans(tfidf_cosine_dist, 5, nstart=100)
 
-clusplot(as.matrix(tfidf_cosine_dist), tfidf_kfit2$cluster, color=T, shade=T, labels=2, lines=0)
+clusplot(as.matrix(tfidf_cosine_dist), tfidf_kfit5$cluster, color=T, shade=T, labels=2, lines=0)
 
 tfidf_kfit2_clusters <- as.data.frame(tfidf_kfit2$cluster) %>% 
   rownames_to_column() %>% 
@@ -161,7 +162,7 @@ avg_sil <- function(k) {
 }
 
 # Compute and plot wss for k = 2 to k = 15
-k.values <- 2:15
+k.values <- 2:40
 
 # extract avg silhouette for 2-15 clusters
 avg_sil_values <- map_dbl(k.values, avg_sil)
@@ -169,7 +170,8 @@ avg_sil_values <- map_dbl(k.values, avg_sil)
 plot(k.values, avg_sil_values,
        type = "b", pch = 19, frame = FALSE, 
        xlab = "Number of clusters K",
-       ylab = "Average Silhouettes")
+       ylab = "Average Silhouettes",
+     main = "Refined Wordlist Clusters")
 
 
 #3 or 5 for f_cosine >0.3 weak
@@ -278,5 +280,23 @@ plot(g, layout=layout1)
 
 ```{r}
 #saveRDS(initial_clusters, file = "./data/initial_clusters.RDS")
+```
+
+# pretty network
+```{r}
+g <- graph.adjacency(as.matrix(cs), weighted=T, mode = "undirected")
+set.seed(42)
+
+comm_fg <- fastgreedy.community(g)
+V(g)$color <- comm_fg$membership
+
+plot(g, layout=layout.kamada.kawai,
+     main = "TFIDF Network",
+     vertex.color = c("#ff00f9", "#f08025", "#ffffff", "#41cd61"),
+     vertex.frame.color= c("#ff00f9", "#f08025", "#ffffff", "#41cd61"),
+     vertex.label.color = "black",
+     vertex.size = 30,
+     edge.curved = TRUE)
+
 ```
 
