@@ -55,7 +55,21 @@ ftp4 <- f_topicProbabilities4 %>%
 ggplot(ftp4, aes(x = x, y = y, fill = value*100)) + geom_tile() + theme_classic() + geom_text(aes(label=round(value*100,0)), color="black")+ guides(fill=F) + scale_fill_gradient(low="white", high="#41cd61") + xlab("Topic") + ylab("Document") + ggtitle("Topic Assignment Probabilties")
 
 ```
+### 4 topic themes
+```{r}
 
+f_ldaOut.terms4 <- as.matrix(terms(f_ldaOut4,15))
+f_ldaOut.terms4[,1:4] <- stemCompletion(f_ldaOut.terms4[,1:4], icorpus, type = "prevalent")
+wordcloud(f_ldaOut.terms4[,1],rep.int(1, 15), max.words=10, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(f_ldaOut.terms4[,2],rep.int(1, 15), max.words=10, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(f_ldaOut.terms4[,3],rep.int(1, 15), max.words=10, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(f_ldaOut.terms4[,4],rep.int(1, 15), max.words=10, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+
+```
 
 ### 5 topics
 ```{r}
@@ -182,7 +196,7 @@ tmr_lda$summary[ order(tmr_lda$summary$prevalence, decreasing = TRUE) , ][ 1:10 
 ```
 
 
-```{r}
+```{r,  eval = FALSE}
 # https://rdrr.io/github/ChengMengli/tf-idf/f/vignettes/Introduction%20to%20textmineR.Rmd
 
 # choose a range of k 
@@ -261,63 +275,120 @@ f_topicProbabilities20 <- as.data.frame(f_ldaOut20@gamma)
 
 ### 49 topics
 ```{r}
-f_ldaOut38 <- LDA(dtmf,38, method="Gibbs", control=
+f_ldaOut49 <- LDA(dtmf,49, method="Gibbs", control=
               list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
 
 
-topics(f_ldaOut38)
-f_ldaOut.topics38 <-as.matrix(topics(f_ldaOut38))
-terms(f_ldaOut38,20)
-f_ldaOut.terms38 <- as.matrix(terms(f_ldaOut38,20))
+topics(f_ldaOut49)
+f_ldaOut.topics49 <-as.matrix(topics(f_ldaOut49))
+terms(f_ldaOut49,20)
+f_ldaOut.terms49 <- as.matrix(terms(f_ldaOut49,20))
 #Find probabilities associated with each topic assignment
-f_topicProbabilities38 <- as.data.frame(f_ldaOut38@gamma)
-```
+f_topicProbabilities49 <- as.data.frame(f_ldaOut49@gamma)
 
-```{r}
-tf_sample <- TermDocFreq(tmr_dtmf)
-tf_sample$idf[ is.infinite(tf_sample$idf) ] <- 0 # fix idf for missing words
+tpn <- 1:49
+tpn <- paste("Topic", tpn, sep = "_")
 
-tf_idf <- t(tmr_dtmf / rowSums(tmr_dtmf)) * tf_sample$idf
+names(f_topicProbabilities49) <- tpn
 
-tf_idf <- t(tf_idf)
+ftp49 <- f_topicProbabilities49 %>% 
+  rownames_to_column() %>% 
+  mutate(rowname = paste("Doc", rowname, sep = "")) %>% 
+  gather(x, value, 2:50) %>%
+  mutate(x = factor(x, levels = unique(x)), # alphabetical order by default
+         y = factor(rowname, levels = rev(unique(rowname)))) # force reverse alphabetical order
 
-# Fit a Latent Semantic Analysis model
-# note the number of topics is arbitrary here
-# see extensions for more info
-lsa_model <- FitLsaModel(dtm = tf_idf, 
-                     k = 4)
-lsa_model$top_terms <- GetTopTerms(phi = lsa_model$phi, M = 5)
-head(t(lsa_model$top_terms))
+ggplot(ftp49, aes(x = x, y = y, fill = value*100)) + geom_tile() + theme_classic() + geom_text(aes(label=round(value*100,0)), color="black")+ guides(fill=F) + scale_fill_gradient(low="white", high="#41cd61") + xlab("Topic") + ylab("Document") + ggtitle("Topic Assignment Probabilties") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-# Get the prevalence of each topic
-# You can make this discrete by applying a threshold, say 0.05, for
-# topics in/out of docuemnts. 
-lsa_model$prevalence <- colSums(lsa_model$theta) / sum(lsa_model$theta) * 100
 
-# textmineR has a naive topic labeling tool based on probable bigrams
-lsa_model$labels <- LabelTopics(assignments = lsa_model$theta > 0.05, 
-                            dtm = tmr_dtmf,
-                            M = 1)
+f_ldaOut.terms49 <- as.matrix(terms(f_ldaOut49, 8))
+f_ldaOut.terms49 <- t(f_ldaOut.terms49)
+f_ldaOut.terms49[,1:5] <- stemCompletion(f_ldaOut.terms49[,1:5], icorpus, type = "prevalent")
+f_ldaOut.terms49 <- as.data.frame(f_ldaOut.terms49, stringsAsFactors = FALSE)
+f_ldaOut.terms49 <- f_ldaOut.terms49 %>% 
+  rownames_to_column(var = "topicnum")
+f_ldaOut.terms49$topic <- paste(f_ldaOut.terms49$V1, f_ldaOut.terms49$V2, f_ldaOut.terms49$V3, f_ldaOut.terms49$V4, f_ldaOut.terms49$V5, sep = ", ")
+f_ldaOut.terms49$topic <- paste(f_ldaOut.terms49$topicnum, f_ldaOut.terms49$topic, sep = " - " )
+f_ldaOut.terms49$topicnum <- gsub(" ", "_", f_ldaOut.terms49$topicnum)
 
-# put them together, with coherence into a summary table
-lsa_model$summary <- data.frame(topic = rownames(lsa_model$phi),
-                            label = lsa_model$labels,
-                            coherence = round(lsa_model$coherence, 3),
-                            prevalence = round(lsa_model$prevalence,3),
-                            top_terms = apply(lsa_model$top_terms, 2, function(x){
-                              paste(x, collapse = ", ")
-                            }),
-                            stringsAsFactors = FALSE)
+fntopicslabel <- c("certainty", #topic1
+                   "document analysis", #topic2
+                   "sharing information", #topic3
+                   "academic research", #topic4
+                   "problem solving", #topic5
+                   "statistical distributions", #topic6
+                   "quantatative analysis", #topic7
+                   "decision making", #topic8
+                   "building understanding", #topic9
+                   "sensemaking", #topic10
+                   "working in teams", #topic11
+                   "strategic problem solving", #topic12
+                   "document similarity analysis", #topic13
+                   "project success", #topic14
+                   "stakeholder communication", #topic15
+                   "?fundamental structure", #topic16
+                   "not repeating the past", #topic17
+                   "?understanding context", #topic18
+                   "identifying failure", #topic19
+                   "idea generation", #topic20
+                   "?connections", #topic21
+                   "time managment", #topic22
+                   "topic modelling", #topic23
+                   "professional dialouges", #topic24
+                   "technology for problem solving", #topic25
+                   "desigin systems", #topic26
+                   "increasing diversity", #topic27
+                   "consequences of poor managment practice", #topic28
+                   "planning change", #topic29
+                   "support vector machines", #topic30
+                   "project management", #topic31
+                   "process controls", #topic32
+                   "eror managment", #topic33
+                   "issues with moving too fast", #topic34
+                   "issues with technique", #topic35
+                   "talking about issues", #topic36
+                   "data analysis and modelling", #topic37
+                   "oganisations", #topic38
+                   "teams", #topic39
+                   "data modelling, colinearity", #topic40
+                   "clustering alogirthms", #topic41
+                   "text mining", #topic42
+                   "people managment", #topic43
+                   "process development", #topic44
+                   "?excel", #topic45
+                   "systems implimentation and development", #topic46
+                   "monte carlo simulation", #topic47
+                   "organisation structure", #topic48
+                   "risk managment" #topic49
+                   )
 
-lsa_model$summary[ order(lsa_model$summary$prevalence, decreasing = TRUE) , ][ 1:10 , ]
+f_ldaOut.terms49$topicname <-  fntopicslabel
 
-#elephants???
+topic49assign <- ftp49 %>% 
+  filter(value >= 0.12)
+names(topic49assign)[2] <- "topicnum"
+
+topic49assign <- merge(topic49assign, f_ldaOut.terms49, by = "topicnum")
+
+
 ```
 
 
 ### NMI between topics?
 
 ```{r}
+betterlsaclus <- readRDS(file = "./data/betterlsaclus.RDS")
+f_ldaOut.topics4
+topics4 <- as.data.frame(f_ldaOut.topics4)
+names(topics4) <- "fourtopicassignments"
+betterlsaclus$fourtopicassignments <- topics4$fourtopicassignments
 
+
+similarity <- betterlsaclus
+names(similarity)[3:6] <- c("LSA_Network_Graph", "LSA_Clusters", "LSA_Clusters2", "Topic_Model")
+similarity <- similarity[,-4]
+shared <- proxy::dist(similarity[,3:5], method = NMI, pairwise = TRUE, by_rows = FALSE)
+shared <- as.matrix(shared)
+corrplot(shared, method = "number", is.corr = FALSE)
 ```
 

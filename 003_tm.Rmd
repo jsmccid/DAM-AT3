@@ -258,7 +258,7 @@ p
 
 tfidf_unstem <- as.data.frame(unname(as.matrix(wf_tot_tfidf)), stringsAsFactors = FALSE)
 names(tfidf_unstem) <- c("term", "occurrences")
-ttfidf_unstem$fullterm <- stemCompletion(tfidf_unstem$term, icorpus, type = "prevalent")
+tfidf_unstem$fullterm <- stemCompletion(tfidf_unstem$term, icorpus, type = "prevalent")
 tfidf_unstem[tfidf_unstem$fullterm == "", "fullterm"] <- tfidf_unstem[tfidf_unstem$fullterm == "", "term"]
 tfidf_unstem$occurrences <- as.numeric(tfidf_unstem$occurrences)
 

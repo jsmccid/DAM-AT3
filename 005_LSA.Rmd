@@ -127,21 +127,21 @@ comm_fg_lsa <- fastgreedy.community(g_lsa)
 comm_fg_lsa$membership
 V(g_lsa)$color <- comm_fg_lsa$membership
 plot(g_lsa, layout=layout.kamada.kawai)
-cmap_lsa_4dim <- cbind(as.data.frame(filekey_lsa, row.names = F),comm_fg_lsa$membership)
+#cmap_lsa_4dim <- cbind(as.data.frame(filekey_lsa, row.names = F),comm_fg_lsa$membership)
 
 #Community detection - Louvain
 comm_lv_lsa <- cluster_louvain(g_lsa)
 comm_lv_lsa$membership
 V(g_lsa)$color <- comm_lv_lsa$membership
 plot(g_lsa, layout=layout.kamada.kawai)
-community_mapping_lsa <- cbind(community_mapping_lsa,comm_lv_lsa$membership)
+#community_mapping_lsa <- cbind(community_mapping_lsa,comm_lv_lsa$membership)
 
 # three groupings in LSA space? Slight differences between the two
 
-colnames(community_mapping_lsa)[2] <- "rowname"
-
-lsa_clusters <- merge(lsa_clusters, community_mapping_lsa, by = "rowname")
-lsa_clusters <- lsa_clusters[-4]
+# colnames(community_mapping_lsa)[2] <- "rowname"
+# 
+# lsa_clusters <- merge(lsa_clusters, community_mapping_lsa, by = "rowname")
+# lsa_clusters <- lsa_clusters[-4]
 ```
 
 ```{r}
