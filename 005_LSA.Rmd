@@ -6,8 +6,7 @@ f_tdm.matrix <- as.matrix(f_tdm)
 f_tdm.matrix.lsa <- lw_tf(f_tdm.matrix) * gw_idf(f_tdm.matrix)
 
 #compute the Latent semantic space
-f_lsaSpace <- lsa(f_tdm.matrix.lsa, dimcalc_share())
-names(f_lsaSpace)
+f_lsaSpace <- lsa(f_tdm.matrix.lsa,4)
 f_LSAMat <- as.textmatrix(f_lsaSpace)
 
 f_LSAMat["risk",1:10]
@@ -15,6 +14,13 @@ f_tdm.matrix.lsa["risk",1:10]
 
 #Similarity matrix
 f_cs.lsa <- as.matrix(cosineSim(t(f_LSAMat)))
+
+f_cs.lsa_corr <- f_cs.lsa
+colnames(f_cs.lsa_corr) <- 1:42
+
+corrplot(f_cs.lsa_corr, is.corr = FALSE, tl.col = "black")
+
+
 f_cs.lsa[f_cs.lsa < 0.7] <- 0 # change?
 f_cs.lsa <- round(f_cs.lsa,3)
 
@@ -24,9 +30,32 @@ neighbors("risk",n=10,tvectors=f_LSAtk)
 
 # gaze into crytal ball?? alleman?
 
-neighbors("organis",n=10,tvectors=f_LSAtk)
+neighbors("stupid",n=20,tvectors=f_LSAtk)
+neighbors("eleph",n=20,tvectors=f_LSAtk)
+neighbors("distribut",n=20,tvectors=f_LSAtk)
 ```
 ## wordmap
+```{r}
+freqlsa <- colSums(as.matrix(t(f_LSAMat)))
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=100, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+
+```
+
 
 ## clustering
 ```{r}
@@ -45,10 +74,13 @@ k.values <- 2:15
 # extract avg silhouette for 2-15 clusters
 avg_sil_values <- map_dbl(k.values, avg_sil)
 
+summary(avg_sil_values)
+
 plot(k.values, avg_sil_values,
        type = "b", pch = 19, frame = FALSE, 
        xlab = "Number of clusters K",
-       ylab = "Average Silhouettes")
+       ylab = "Average Silhouettes",
+     main = "LSA 14 Dimensions Clusters")
 
 # 4 or 5 cluster optimum in LSA approx 0.47 medium to weak structure
 
@@ -63,6 +95,8 @@ f_lsa_clus5 <- kmeans(f_lsa_csd, 5, nstart=100)
 clusplot(as.matrix(f_lsa_csd), f_lsa_clus5$cluster, color=T, shade=T, labels=2, lines=0)
 
 f_lsa_clus4 <- kmeans(f_lsa_csd, 4, nstart=100)
+
+clusplot(as.matrix(f_lsa_csd), f_lsa_clus4$cluster, color=T, shade=T, labels=2, lines=0)
 
 f_lsa_clus5_clusters <- as.data.frame(f_lsa_clus5$cluster) %>% 
   rownames_to_column() %>% 
@@ -79,7 +113,7 @@ lsa_clusters <- merge(f_lsa_clus5_clusters, f_lsa_clus4_clusters, by = "rowname"
 
 ## network graphing
 ```{r}
-f_cs.lsa_ng <- cosineSim(t(f_LSAMat))
+f_cs.lsa_ng <- cosineSim(t(f_LSAMat)[c(1:19,23:35),])
 f_cs.lsa_ng[f_cs.lsa_ng < median(f_cs.lsa_ng)] <- 0
 f_cs.lsa_ng <- round(f_cs.lsa_ng,3)
 
@@ -93,7 +127,7 @@ comm_fg_lsa <- fastgreedy.community(g_lsa)
 comm_fg_lsa$membership
 V(g_lsa)$color <- comm_fg_lsa$membership
 plot(g_lsa, layout=layout.kamada.kawai)
-community_mapping_lsa <- cbind(as.data.frame(filekey_lsa, row.names = F),comm_fg_lsa$membership)
+cmap_lsa_4dim <- cbind(as.data.frame(filekey_lsa, row.names = F),comm_fg_lsa$membership)
 
 #Community detection - Louvain
 comm_lv_lsa <- cluster_louvain(g_lsa)
@@ -114,7 +148,184 @@ lsa_clusters <- lsa_clusters[-4]
 #saveRDS(lsa_clusters, file = "./data/lsa_clusters.RDS")
 ```
 
+
+## Better clusters
+```{r, eval = FALSE}
+
+# saveRDS(cmap_lsa_4dim, file = "./data/cmaplsa4win.RDS")
+cmap_lsa_4dim$f_lsa_clus4_clusters <- f_lsa_clus4_clusters$`f_lsa_clus4$cluster`
+f_lsa_clus4_clusters_v2
+
+cmap_lsa_4dim$f_lsa_clus4_clusters_v2 <- f_lsa_clus4_clusters_v2$`f_lsa_clus4$cluster`
+
+betterlsaclus <- cmap_lsa_4dim
+
+# saveRDS(betterlsaclus, file = "./data/betterlsaclus.RDS")
+```
+
 ```{r}
+betterlsaclus <- readRDS(file = "./data/betterlsaclus.RDS")
 
 ```
+
+# better cluster wordclouds
+
+```{r}
+lsa_init_mat <- as.matrix(t(f_LSAMat))
+
+ngcm <- betterlsaclus$`comm_fg_lsa$membership`
+
+lclus_ngcm1 <- lsa_init_mat[ngcm == 1,]
+lclus_ngcm2 <- lsa_init_mat[ngcm == 2,]
+lclus_ngcm3 <- lsa_init_mat[ngcm == 3,]
+lclus_ngcm4 <- lsa_init_mat[ngcm == 4,]
+lclus_ngcm1913 <- lsa_init_mat[c(19,13),]
+lclus_ngcm3823 <- lsa_init_mat[c(38,23),]
+lclus_ngcm131824 <- lsa_init_mat[c(13,18,24),]
+
+```
+
+
+```{r}
+freqlsa <- colSums(lclus_ngcm1)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+
+neighbors("risk",n=20,tvectors=f_LSAtk)
+```
+
+
+```{r}
+freqlsa <- colSums(lclus_ngcm2)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+```{r}
+freqlsa <- colSums(lclus_ngcm3)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+
+```{r}
+wflsa <- data.frame(term=names(lclus_ngcm4),occurrences=lclus_ngcm4)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+
+```{r}
+freqlsa <- colSums(lclus_ngcm1913)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+```{r}
+freqlsa <- colSums(lclus_ngcm3823)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+```{r}
+freqlsa <- colSums(lclus_ngcm131824)
+length(freqlsa)
+ordr <- order(freqlsa,decreasing=TRUE)
+freqlsa[head(ordr)]
+
+wflsa <- data.frame(term=names(freqlsa),occurrences=freqlsa)
+
+wflsa_unstem <- as.data.frame(unname(as.matrix(wflsa)), stringsAsFactors = FALSE)
+names(wflsa_unstem) <- c("term", "occurrences")
+wflsa_unstem$fullterm <- stemCompletion(wflsa_unstem$term, icorpus, type = "prevalent")
+wflsa_unstem[wflsa_unstem$fullterm == "", "fullterm"] <- wflsa_unstem[wflsa_unstem$fullterm == "", "term"]
+wflsa_unstem$occurrences <- as.numeric(wflsa_unstem$occurrences)
+
+set.seed(99)
+# wordcloud(wflsa_unstem$fullterm,wflsa_unstem$occurrences, max.words=20, colors=c("#ff00f9", "#f08025", "#ffffff", "#41cd61"))
+
+wordcloud(wflsa_unstem$term,wflsa_unstem$occurrences, max.words=15, colors=c("#ff00f9", "#f08025", "#41cd61", "#000000"))
+```
+
+
+
 

@@ -40,6 +40,23 @@ f_ldaOut.terms4 <- as.matrix(terms(f_ldaOut4,8))
 f_topicProbabilities4 <- as.data.frame(f_ldaOut4@gamma)
 
 ```
+
+```{r}
+#https://stackoverflow.com/questions/7421503/how-to-plot-a-confusion-matrix-using-heatmaps-in-r
+names(f_topicProbabilities4) <- c("Topic_1", "Topic_2", "Topic_3", "Topic_4")
+
+ftp4 <- f_topicProbabilities4 %>% 
+  rownames_to_column() %>% 
+  mutate(rowname = paste("Doc", rowname, sep = "")) %>% 
+  gather(x, value, 2:5) %>%
+  mutate(x = factor(x), # alphabetical order by default
+         y = factor(rowname, levels = rev(unique(rowname)))) # force reverse alphabetical order
+
+ggplot(ftp4, aes(x = x, y = y, fill = value*100)) + geom_tile() + theme_classic() + geom_text(aes(label=round(value*100,0)), color="black")+ guides(fill=F) + scale_fill_gradient(low="white", high="#41cd61") + xlab("Topic") + ylab("Document") + ggtitle("Topic Assignment Probabilties")
+
+```
+
+
 ### 5 topics
 ```{r}
 # 4 clusters as identified earlier
@@ -207,7 +224,7 @@ coherence_mat <- data.frame(k = sapply(model_list, function(x) nrow(x$phi)),
 
 # Plot the result
 # On larger (~1,000 or greater documents) corpora, you will usually get a clear peak
-plot(coherence_mat, type = "o")
+plot(coherence_mat, type = "o", main = "Probabilistic Coherence", xlab = "Number of Topics", ylab = "Coherence")
 
 # 4, 5 is ok too and 12, 20 and 38
 ```
@@ -242,7 +259,7 @@ f_topicProbabilities20 <- as.data.frame(f_ldaOut20@gamma)
 ```
 
 
-### 38 topics
+### 49 topics
 ```{r}
 f_ldaOut38 <- LDA(dtmf,38, method="Gibbs", control=
               list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))

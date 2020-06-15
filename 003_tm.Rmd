@@ -233,7 +233,7 @@ wordcloud(wff_unstem$fullterm,wff_unstem$occurrences, max.words=100, colors=c("#
 # purp #ff00f9
 # green #41cd61
 # orange #f08025
-# white #
+# white #ffffff
 # black for bookdown #000000
 
 

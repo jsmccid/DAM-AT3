@@ -55,8 +55,16 @@ categories_bin <- categories %>%
 length(unique(categories$value))
 
 categories_bin <- dcast(melt(categories_bin, id.vars="doc", factorsAsStrings=TRUE), doc ~ value, drop=FALSE , fun.aggregate = length, fill = 0)
+```
 
 
+```{r}
+cb_blog <- categories_bin %>% 
+  gather(x, value, 2:41) %>% 
+  mutate(x = factor(x), # alphabetical order by default
+         y = factor(doc, levels = rev(unique(doc)))) # force reverse alphabetical order
+
+ggplot(cb_blog, aes(x = x, y = y, fill = value*100)) + geom_tile() + theme_classic() + guides(fill=F) + scale_fill_gradient(low="white", high="#41cd61") + xlab("Topic") + ylab("Document") + ggtitle("Category Tags") + theme(axis.text.x = element_text(angle =50, hjust = 1))
 ```
 
 40 topics, however, artles fall into multiple topics, how to capture this?
@@ -83,14 +91,4 @@ f_topicProbabilities40 <- as.data.frame(f_ldaOut40@gamma)
 ```
 
 
-```{r, eval = FALSE}
-options(java.parameters = "-Xmx6G" )
-rJava::.jpackage(parameters="-Xmx4G")
-library(venneuler)
-venneuler::venneuler(outframe)
-
-
-
-
-```
 
