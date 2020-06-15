@@ -317,7 +317,7 @@ fntopicslabel <- c("certainty", #topic1
                    "academic research", #topic4
                    "problem solving", #topic5
                    "statistical distributions", #topic6
-                   "quantatative analysis", #topic7
+                   "quantitative analysis", #topic7
                    "decision making", #topic8
                    "building understanding", #topic9
                    "sensemaking", #topic10
@@ -332,35 +332,38 @@ fntopicslabel <- c("certainty", #topic1
                    "identifying failure", #topic19
                    "idea generation", #topic20
                    "?connections", #topic21
-                   "time managment", #topic22
+                   "time management", #topic22
                    "topic modelling", #topic23
-                   "professional dialouges", #topic24
+                   "professional dialogues", #topic24
                    "technology for problem solving", #topic25
-                   "desigin systems", #topic26
+                   "design systems", #topic26
                    "increasing diversity", #topic27
-                   "consequences of poor managment practice", #topic28
+                   "consequences of poor management practice", #topic28
                    "planning change", #topic29
                    "support vector machines", #topic30
                    "project management", #topic31
                    "process controls", #topic32
-                   "eror managment", #topic33
+                   "error management", #topic33
                    "issues with moving too fast", #topic34
                    "issues with technique", #topic35
                    "talking about issues", #topic36
                    "data analysis and modelling", #topic37
                    "oganisations", #topic38
                    "teams", #topic39
-                   "data modelling, colinearity", #topic40
-                   "clustering alogirthms", #topic41
+                   "data modelling, collinearity", #topic40
+                   "clustering algorithms", #topic41
                    "text mining", #topic42
-                   "people managment", #topic43
+                   "people management", #topic43
                    "process development", #topic44
                    "?excel", #topic45
-                   "systems implimentation and development", #topic46
+                   "systems implementation and development", #topic46
                    "monte carlo simulation", #topic47
                    "organisation structure", #topic48
-                   "risk managment" #topic49
+                   "risk management" #topic49
                    )
+
+fntopicslabellist <- paste("Topic", " ",(1:49), " - ", fntopicslabel, sep = "")
+fntlltogether <- paste(fntopicslabellist, collapse = ", ")
 
 f_ldaOut.terms49$topicname <-  fntopicslabel
 
@@ -370,6 +373,17 @@ names(topic49assign)[2] <- "topicnum"
 
 topic49assign <- merge(topic49assign, f_ldaOut.terms49, by = "topicnum")
 
+topicnames49 <- f_ldaOut.terms49 %>% 
+  select(topicnum, topicname)
+
+ftp49 <- merge(ftp49, topicnames49, by.x = "x", by.y = "topicnum") 
+
+ftp49 <- ftp49 %>% 
+  mutate(topicname = factor(topicname)) # force reverse alphabetical order
+
+ggplot(ftp49, aes(x = topicname, y = rowname, fill = value*100)) + geom_tile() + theme_classic() + geom_text(aes(label=round(value*100,0)), color="black")+ guides(fill=F) + scale_fill_gradient(low="white", high="#41cd61") + xlab("Topic") + ylab("Document") + ggtitle("Topic Assignment Probabilties") + theme(axis.text.x = element_text(angle = 50, hjust=1))
+
+topicnames49
 
 ```
 

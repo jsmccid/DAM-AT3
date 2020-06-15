@@ -74,18 +74,22 @@ rethink the use of topic models, not just single assignments.
 ```{r}
 # test simiarltiy with 40 topic model?
 
-f_ldaOut40 <- LDA(dtmf,40, method="Gibbs", control=
-              list(nstart=10, seed = sample.int(10000,10), best=TRUE, burnin = 1000, iter = 2000, thin=500))
+catass <- categories %>% 
+  select(doc, value)
+catass$doc <- as.factor(catass$doc)
+catass$value <- as.factor(catass$value)
 
+catass$doc <- as.numeric(catass$doc)
 
-topics(f_ldaOut40)
-f_ldaOut.topics40 <-as.matrix(topics(f_ldaOut40))
-terms(f_ldaOut40,20)
-f_ldaOut.terms40 <- as.matrix(terms(f_ldaOut40,8))
-#Find probabilities associated with each topic assignment
-f_topicProbabilities40 <- as.data.frame(f_ldaOut40@gamma)
+ftp49ass <- topic49assign %>% 
+  select(topicnum, rowname)
 
-# now what?
+howclose <- proxy::dist(cluo, method = NMI, pairwise = TRUE, by_rows = FALSE)
+
+topic_print <- merge(ftp49ass, topicnames49, by = "topicnum")
+topic_print <- topic_print %>% 
+  arrange(rowname)
+
 
 
 ```
